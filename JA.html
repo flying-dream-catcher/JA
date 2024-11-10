@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            display: none; /* Initially hidden */
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        button {
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .tab {
+            display: none;
+        }
+        .active {
+            display: block;
+        }
+        .tabs {
+            margin-bottom: 20px;
+        }
+        .status-on-time {
+            background-color: #d4edda; /* Green */
+        }
+        .status-late {
+            background-color: #f8d7da; /* Red */
+        }
+        .status-absent {
+            background-color: #e2e3e5; /* Gray */
+        }
+        .group-header {
+            font-size: 1.2em;
+            margin-top: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1>JA員工簽到系統</h1>
+
+<div class="tabs">
+    <button onclick="showTab('attendance')">簽到</button>
+    <button onclick="showTab('history')">歷史記錄</button>
+</div>
+
+<div id="attendance" class="tab active">
+    <h2>記錄簽到</h2>
+    <input type="date" id="attendanceDate" />
+    <button onclick="markPresent()">Mark全部準時</button>
+
+    <div class="group-header" onclick="toggleGroup('adminTable')">總監</div>
+    <table id="adminTable">
+        <thead>
+            <tr>
+                <th>員工名稱</th>
+                <th>職位</th>
+                <th>簽到狀態</th>
+                <th>原因(if absent)</th>
+                <th>處罰</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Admin rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+
+    <div class="group-header" onclick="toggleGroup('itTable')">技術部</div>
+    <table id="itTable">
+        <thead>
+            <tr>
+                <th>員工名稱</th>
+                <th>職位</th>
+                <th>簽到狀態</th>
+                <th>原因(if absent)</th>
+                <th>處罰</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- IT rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+
+    <div class="group-header" onclick="toggleGroup('financeTable')">人力資源部</div>
+    <table id="financeTable">
+        <thead>
+            <tr>
+                <th>員工名稱</th>
+                <th>職位</th>
+                <th>簽到狀態</th>
+                <th>原因(if absent)</th>
+                <th>處罰</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Finance rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+
+    <div class="group-header" onclick="toggleGroup('operationsTable')">營運及項目管理部</div>
+    <table id="operationsTable">
+        <thead>
+            <tr>
+                <th>員工名稱</th>
+                <th>職位</th>
+                <th>簽到狀態</th>
+                <th>原因(if absent)</th>
+                <th>處罰</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Operations rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+
+    <div class="group-header" onclick="toggleGroup('hrTable')">財務部</div>
+    <table id="hrTable">
+        <thead>
+            <tr>
+                <th>員工名稱</th>
+                <th>職位</th>
+                <th>簽到狀態</th>
+                <th>原因(if absent)</th>
+                <th>處罰</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- HR rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+
+    <div class="group-header" onclick="toggleGroup('salesTable')">銷售及市場推廣部</div>
+    <table id="salesTable">
+        <thead>
+            <tr>
+                <th>員工名稱</th>
+                <th>職位</th>
+                <th>簽到狀態</th>
+                <th>原因(if absent)</th>
+                <th>處罰</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Sales rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+
+    <button onclick="calculateWages()">計算本月工資</button>
+    <div id="wageResult" style="margin-top: 20px;"></div>
+</div>
+
+<div id="history" class="tab">
+    <h2>簽到歷史記錄</h2>
+    <div id="historyContainer">
+        <!-- Daily history dropdowns will be populated by JavaScript -->
+    </div>
+    <button onclick="calculateBonus()">計算全勤獎</button>
+    <div id="bonusResult" style="margin-top: 20px;"></div>
+</div>
+
+<script>
+    const employees = [
+        { name: "鄧朗晴", 職位: "Admin" },
+        { name: "梁凱韻", 職位: "Admin" },
+        { name: "王灝鑾", 職位: "Admin" },
+        { name: "李逸塵", 職位: "Manager", group: "IT" },
+        { name: "邱美嘉", 職位: "Manager", group: "Finance" },
+        { name: "邱威盛", 職位: "Manager", group: "Operations" },
+        { name: "鄧涵文", 職位: "Manager", group: "HR" },
+        { name: "何索妮", 職位: "Manager", group: "Sales" },
+        { name: "李俊毅", 職位: "Employee", group: "IT" },
+        { name: "謝曉榆", 職位: "Employee", group: "Operations" },
+        { name: "陳卓楠", 職位: "Employee", group: "Finance" },
+        { name: "黃芷淇", 職位: "Employee", group: "Finance" },
+        { name: "陳穎潼", 職位: "Employee", group: "Operations" },
+        { name: "陳嘉馨", 職位: "Employee", group: "HR" },
+        { name: "丘莉欣", 職位: "Employee", group: "Sales" },
+        { name: "張佳蕾", 職位: "Employee", group: "Sales" },
+        { name: "麥麗瑩", 職位: "Employee", group: "HR" },
+    ];
+
+    const wages = {
+        "Employee": { "On Time": 2, "Late": -1, "Absent": 0 },
+        "Manager": { "On Time": 3, "Late": -1, "Absent": 0 },
+        "Admin": { "On Time": 4, "Late": -1, "Absent": 0 }
+    };
+
+    const 處罰 = {
+        "Inactive": -1,
+        "Late on Project": -2
+    };
+
+    let attendanceData = Array(employees.length).fill({ status: "", reason: "", 處罰: [] });
+    let attendanceHistory = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
+
+    function populateAttendanceTables() {
+        const adminTableBody = document.getElementById("adminTable").querySelector("tbody");
+        const itTableBody = document.getElementById("itTable").querySelector("tbody");
+        const financeTableBody = document.getElementById("financeTable").querySelector("tbody");
+        const operationsTableBody = document.getElementById("operationsTable").querySelector("tbody");
+        const hrTableBody = document.getElementById("hrTable").querySelector("tbody");
+        const salesTableBody = document.getElementById("salesTable").querySelector("tbody");
+
+        employees.forEach((employee, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${employee.name}</td>
+                <td>${employee.職位}</td>
+                <td>
+                    <select id="status-${index}" onchange="updateAttendance(${index})">
+                        <option value="">Select</option>
+                        <option value="On Time">準時</option>
+                        <option value="Late">遲到</option>
+                        <option value="Absent">Absent</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text" id="reason-${index}" placeholder="原因if absent" disabled />
+                </td>
+                <td>
+                    <select multiple id="處罰-${index}" onchange="update處罰(${index})">
+                        <option value="Inactive">消極怠工</option>
+                        <option value="Late on Project">遲交項目</option>
+                    </select>
+                </td>
+            `;
+
+            if (employee.職位 === "Admin") {
+                adminTableBody.appendChild(row);
+            } else if (employee.group === "IT") {
+                itTableBody.appendChild(row);
+            } else if (employee.group === "Finance") {
+                financeTableBody.appendChild(row);
+            } else if (employee.group === "Operations") {
+                operationsTableBody.appendChild(row);
+            } else if (employee.group === "HR") {
+                hrTableBody.appendChild(row);
+            } else if (employee.group === "Sales") {
+                salesTableBody.appendChild(row);
+            }
+        });
+    }
+
+    function markPresent() {
+        const date = document.getElementById("attendanceDate").value;
+        if (!date) {
+            alert("Please select a date.");
+            return;
+        }
+
+        attendanceData.forEach((_, index) => {
+            const statusSelect = document.getElementById(`status-${index}`);
+            statusSelect.value = "On Time"; // Mark all as present
+            updateAttendance(index);
+        });
+
+        alert("All employees marked as present for the selected date.");
+    }
+
+    function updateAttendance(index) {
+        const statusSelect = document.getElementById(`status-${index}`);
+        const reasonInput = document.getElementById(`reason-${index}`);
+        
+        if (statusSelect.value === "Absent") {
+            reasonInput.disabled = false;
+        } else {
+            reasonInput.disabled = true;
+            reasonInput.value = ""; // Clear 原因ifif not absent
+        }
+
+        const date = document.getElementById("attendanceDate").value;
+        const timestamp = new Date().toLocaleString();
+
+        // Check for existing entry in attendanceHistory
+        const existingEntryIndex = attendanceHistory.findIndex(entry => entry.date === date && entry.name === employees[index].name);
+        
+        if (existingEntryIndex >= 0) {
+            // Update existing entry
+            attendanceHistory[existingEntryIndex].status = statusSelect.value;
+            attendanceHistory[existingEntryIndex].timestamp = timestamp;
+            attendanceHistory[existingEntryIndex].原因if= reasonInput.value;
+        } else {
+            // Add new entry
+            attendanceHistory.push({
+                date: date,
+                name: employees[index].name,
+                status: statusSelect.value,
+                timestamp: timestamp,
+                reason: reasonInput.value
+            });
+        }
+
+        attendanceData[index] = { 
+            status: statusSelect.value, 
+            reason: reasonInput.value,
+            職位: employees[index].職位,
+            處罰: attendanceData[index].處罰 // Retain previous 處罰
+        };
+
+        // Save attendance history to local storage
+        localStorage.setItem('attendanceHistory', JSON.stringify(attendanceHistory));
+    }
+
+    function update處罰(index) {
+        const 處罰elect = document.getElementById(`處罰-${index}`);
+        const selectedOptions = Array.from(處罰elect.selectedOptions).map(option => option.value);
+        
+        attendanceData[index].處罰 = selectedOptions;
+    }
+
+    function calculateWages() {
+        let totalWages = 0;
+
+        attendanceData.forEach(employee => {
+            if (employee.status) {
+                totalWages += wages[employee.職位][employee.status] || 0; // Calculate base wages
+            }
+            // Apply 處罰
+            employee.處罰.forEach(punishment => {
+                totalWages += 處罰[punishment] || 0;
+            });
+        });
+
+        // Display the total wage amount
+        const wageResult = document.getElementById("wageResult");
+        wageResult.innerHTML = `Total Wages for the Month: $${totalWages}`;
+    }
+
+    function showTab(tabName) {
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.getElementById(tabName).classList.add('active');
+
+        if (tabName === 'history') {
+            populateHistory(); // Populate history when the tab is shown
+        }
+    }
+
+    function populateHistory() {
+        const container = document.getElementById("historyContainer");
+        container.innerHTML = ""; // Clear previous entries
+
+        const historyByDate = attendanceHistory.reduce((acc, entry) => {
+            (acc[entry.date] = acc[entry.date] || []).push(entry);
+            return acc;
+        }, {});
+
+        for (const [date, entries] of Object.entries(historyByDate)) {
+            const dropdown = document.createElement("div");
+            dropdown.className = "dropdown";
+            dropdown.innerHTML = `${date} (${entries.length} entries)`;
+            dropdown.onclick = () => toggleDetails(dropdown, entries);
+
+            const details = document.createElement("div");
+            details.className = "history-details";
+            details.style.display = "none"; // Start hidden
+
+            entries.forEach(entry => {
+                const detailRow = document.createElement("div");
+                detailRow.innerHTML = `
+                    ${entry.name} - 
+                    <span class="${entry.status === 'On Time' ? 'status-on-time' : entry.status === 'Late' ? 'status-late' : 'status-absent'}">
+                        ${entry.status}
+                    </span> 
+                    at ${entry.timestamp}
+                `;
+                details.appendChild(detailRow);
+            });
+
+            container.appendChild(dropdown);
+            container.appendChild(details);
+        }
+    }
+
+    function toggleDetails(dropdown, entries) {
+        const details = dropdown.nextElementSibling;
+        details.style.display = details.style.display === "none" || details.style.display === "" ? "block" : "none";
+    }
+
+    function calculateBonus() {
+        let totalBonus = 0;
+        const bonusPerEmployee = 10;
+
+        const uniqueEmployees = new Set(); // To avoid counting duplicates
+
+        attendanceHistory.forEach(entry => {
+            if (entry.status === "On Time" || entry.status === "Absent") {
+                uniqueEmployees.add(entry.name); // Add employee to the set
+            }
+        });
+
+        uniqueEmployees.forEach(employee => {
+            const statuses = attendanceHistory.filter(entry => entry.name === employee).map(entry => entry.status);
+            const hasBonus = statuses.every(status => status === "On Time" || status === "Absent");
+
+            if (hasBonus) {
+                totalBonus += bonusPerEmployee; // $10 bonus for each eligible employee
+            }
+        });
+
+        // Display the total bonus amount
+        const bonusResult = document.getElementById("bonusResult");
+        bonusResult.innerHTML = `Total Bonus: $${totalBonus}`;
+    }
+
+    function toggleGroup(tableId) {
+        const table = document.getElementById(tableId);
+        table.style.display = table.style.display === "none" || table.style.display === "" ? "table" : "none";
+    }
+
+    window.onload = function() {
+        populateAttendanceTables();
+        loadAttendanceData(); // Load attendance data from local storage
+    };
+
+    function loadAttendanceData() {
+        const storedData = localStorage.getItem('attendanceData');
+        if (storedData) {
+            attendanceData = JSON.parse(storedData);
+            attendanceData.forEach((data, index) => {
+                const statusSelect = document.getElementById(`status-${index}`);
+                const reasonInput = document.getElementById(`reason-${index}`);
+                statusSelect.value = data.status;
+                reasonInput.value = data.reason;
+                if (data.status === "Absent") {
+                    reasonInput.disabled = false;
+                }
+                document.getElementById(`處罰-${index}`).value = data.處罰.join(', ');
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
